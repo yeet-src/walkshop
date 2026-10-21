@@ -246,7 +246,12 @@ export default function Chat() {
 
   onMount(async () => {
     chatInfo().then((i) => setModel(i.model)).catch(() => {});
-    chatAuth().then(setAuth).catch(() => {});
+    /* The account can go away under an open page (a logout, a daemon
+     * restart), so look again now and then, not only at mount. */
+    const checkAuth = () => chatAuth().then(setAuth).catch(() => {});
+    checkAuth();
+    const authTimer = setInterval(checkAuth, 20_000);
+    onCleanup(() => clearInterval(authTimer));
     chatPins().then(takePins).catch(() => {});
     chatStatus().then((st) => { setAgent(st); setBusy(Boolean(st.busy)); }).catch(() => {});
     try {
