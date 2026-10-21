@@ -54,7 +54,7 @@ export default function Try() {
     },
   ];
   return (
-    <div class="space-y-2 text-xs" data-try>
+    <div class="space-y-5 text-xs" data-try>
       <For each={examples}>
         {(ex) => (
           <div>
