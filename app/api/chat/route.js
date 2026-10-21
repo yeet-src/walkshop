@@ -5,6 +5,7 @@
  *   curl -sN 'localhost:3600/api/chat?stream=1' -d 'show me the last requests'   the reply as it is written
  *   curl -s localhost:3600/api/chat                                           the conversation so far
  *   curl -s -X DELETE localhost:3600/api/chat                                 clear it, stop its blocks
+ *   curl -s -X PATCH localhost:3600/api/chat -d '{ "auto": false }'           watches no longer wake the agent (held until true)
  *
  * A message posted here is the same as one typed on the page: the
  * conversation is one and shared, so the reply, and the instruments
@@ -14,7 +15,7 @@
  * looked at. Runs in Node; the agent runs in the isolate. */
 
 import { parseBlocks } from "@/lib/chat/blocks.js";
-import { chatClear, chatHistory, chatInfo, chatSend } from "@/lib/chatActions.js";
+import { chatAuto, chatClear, chatHistory, chatInfo, chatSend, chatStatus } from "@/lib/chatActions.js";
 
 const MAX_WAIT_MS = 110_000;
 const POLL_MS = 400;
@@ -53,8 +54,22 @@ const shape = (m) => ({
 });
 
 export async function GET() {
-  const [h, i] = await Promise.all([chatHistory(), chatInfo()]);
-  return Response.json({ model: i.model, messages: h.map(shape) });
+  const [h, i, st] = await Promise.all([chatHistory(), chatInfo(), chatStatus()]);
+  return Response.json({ model: i.model, auto: st.auto !== false, messages: h.map(shape) });
+}
+
+/* PATCH { "auto": false } — stop watches from waking the agent (they
+ * keep running and showing); { "auto": true } lets held wakes through. */
+export async function PATCH(request) {
+  let body;
+  try {
+    body = JSON.parse(await request.text());
+  } catch {
+    return Response.json({ error: 'send { "auto": true | false }' }, { status: 400 });
+  }
+  if (typeof body?.auto !== "boolean") return Response.json({ error: 'send { "auto": true | false }' }, { status: 400 });
+  const st = await chatAuto(body.auto);
+  return Response.json({ auto: st.auto, queued: st.queued, watches: st.watches ?? 0 });
 }
 
 export async function DELETE() {

@@ -58,6 +58,18 @@ html {
   color-scheme: dark;
 }
 
+/* A narrow screen never scrolls sideways: whatever is wider than the
+ * viewport (a table, a dump, a status line) scrolls inside its own box
+ * or is cut, and the page itself stays put. */
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+body {
+  overflow-wrap: anywhere;
+}
+
 /* Monospace throughout, deliberately: the whole layout is columns of
  * numbers, and proportional digits make a table of them jitter as it
  * updates. */

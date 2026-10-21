@@ -180,7 +180,7 @@ export function Bars(props) {
 
 export function Table(props) {
   return (
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto max-w-full">
       <Show when={props.attrs?.title}>
         <div class="text-yellow text-xs">{props.attrs.title}</div>
       </Show>

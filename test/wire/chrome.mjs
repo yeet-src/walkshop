@@ -5,6 +5,7 @@
  *
  *   node test/wire/chrome.mjs [--port 3700] [--ask "draw the packet rate on a canvas"] [--out shot.png]
  */
+import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 
@@ -19,7 +20,7 @@ const browser = at("--browser", "google-chrome-stable");
 const debugPort = 9333 + Math.floor(Math.random() * 100);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const chrome = spawn(browser, ["--headless=new", `--remote-debugging-port=${debugPort}`, "--window-size=1300,1000", "--disable-gpu", "--no-first-run", "--no-default-browser-check", `--user-data-dir=${process.cwd()}/.build/chrome-profile`, "about:blank"], { stdio: ["ignore", "ignore", "ignore"] });
+const chrome = spawn(browser, ["--headless=new", `--remote-debugging-port=${debugPort}`, `--window-size=${at("--width", 1300)},${at("--height", 1000)}`, "--disable-gpu", "--no-first-run", "--no-default-browser-check", `--user-data-dir=${tmpdir()}/walkshop-chrome-profile`, "about:blank"], { stdio: ["ignore", "ignore", "ignore"] });
 process.on("exit", () => chrome.kill("SIGTERM"));
 
 let targets = null;
@@ -145,6 +146,9 @@ if (then) {
 }
 /* Let a live block run a few more times before the shot. */
 await wait(Number(at("--settle", 0)));
+/* `--eval <js>`: anything else worth asking the page, printed as JSON. */
+const probe = at("--eval", "");
+if (probe) console.log(`eval: ${JSON.stringify(await evaluate(probe))}`);
 /* Scroll the canvas into view and shoot it. */
 await evaluate(`document.querySelector("[data-block] canvas")?.scrollIntoView({ block: "center" })`);
 await wait(500);

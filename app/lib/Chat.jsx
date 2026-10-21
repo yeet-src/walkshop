@@ -10,7 +10,7 @@
  * snapshot arrives on the same lane, matched by id. */
 import { createEffect, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 
-import { chatClear, chatHistory, chatInfo, chatPin, chatPins, chatSend, chatStatus, chatStop, chatUnpin } from "./chatActions.js";
+import { chatAuto, chatClear, chatHistory, chatInfo, chatPin, chatPins, chatSend, chatStatus, chatStop, chatUnpin } from "./chatActions.js";
 import { parseBlocks } from "./chat/blocks.js";
 import { tidyJs, tokenizeJs } from "./chat/js.js";
 import Md from "./chat/Md.jsx";
@@ -49,7 +49,7 @@ export default function Chat() {
   const [busy, setBusy] = createSignal(false);
   const [following, setFollowing] = createSignal(true); /* tailing: at the bottom, so new text scrolls into view */
   const [model, setModel] = createSignal("");
-  const [agent, setAgent] = createSignal({ busy: false, queued: 0, live: 0, watches: 0, pinned: 0 }); /* the shared state, pushed by the isolate */
+  const [agent, setAgent] = createSignal({ busy: false, queued: 0, live: 0, watches: 0, pinned: 0, auto: true }); /* the shared state, pushed by the isolate */
   const [pins, setPins] = createSignal([]); /* the dashboard: shared, pushed by the isolate */
   const [dash, setDash] = createSignal(false); /* the overlay, yours */
   /* The corner panel's place: drag its top bar anywhere; remembered
@@ -256,20 +256,33 @@ export default function Chat() {
    * sticky, so it is at the foot of a short transcript and stays put
    * at the viewport's edge while a long one scrolls. */
   let root;
-  const [minH, setMinH] = createSignal("70vh");
+  const [minH, setMinH] = createSignal("calc(100dvh - 4rem)");
   const fit = () => {
     if (!root) return;
     const top = root.getBoundingClientRect().top + window.scrollY;
-    setMinH(`calc(100vh - ${Math.round(top)}px - 8px)`);
+    setMinH(`calc(100dvh - ${Math.round(top)}px - 8px)`);
   };
   onMount(() => {
+    /* The island mounts before the page around it has settled — the
+     * stylesheet, the nav, the fonts — so its top moves after this
+     * runs. Measure now, again on the next frames and on load, and
+     * whenever the body's size changes, not only on a window resize. */
     fit();
+    requestAnimationFrame(() => {
+      fit();
+      requestAnimationFrame(fit);
+    });
+    window.addEventListener("load", fit);
     window.addEventListener("resize", fit);
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(fit) : null;
+    ro?.observe(document.body);
     const onScroll = () => setFollowing(atBottom());
     window.addEventListener("scroll", onScroll, { passive: true });
     onCleanup(() => {
+      window.removeEventListener("load", fit);
       window.removeEventListener("resize", fit);
       window.removeEventListener("scroll", onScroll);
+      ro?.disconnect();
     });
   });
 
@@ -286,6 +299,9 @@ export default function Chat() {
         </For>
         <button class="ml-auto text-dim hover:text-fg" onClick={() => setDash(!dash())} data-dash-toggle>
           [dashboard{() => (pins().length ? ` ${pins().length}` : "")}]
+        </button>
+        <button class={agent().auto === false ? "text-yellow hover:text-fg" : "text-dim hover:text-fg"} title="whether a watch may wake the agent on its own" onClick={() => chatAuto(agent().auto === false).then(setAgent).catch(() => {})} data-auto-toggle>
+          [auto {() => (agent().auto === false ? "off" : "on")}]
         </button>
         <button class="text-dim hover:text-red" onClick={() => chatClear().catch(() => {})}>
           [clear]
@@ -429,7 +445,7 @@ export default function Chat() {
           </div>
           {/* the conversation, in the corner: see-through, the last few
               exchanges as prose, a block as a chip, streaming as it comes */}
-          <div class="fixed z-50 w-[28rem] max-w-[45vw] overflow-auto border border-rule p-2 text-xs space-y-2" style={cornerStyle()} data-dash-latest ref={(el) => setTimeout(() => (el.scrollTop = el.scrollHeight), 0)}>
+          <div class="fixed z-50 w-[28rem] max-w-[calc(100vw-2rem)] sm:max-w-[45vw] overflow-auto border border-rule p-2 text-xs space-y-2" style={cornerStyle()} data-dash-latest ref={(el) => setTimeout(() => (el.scrollTop = el.scrollHeight), 0)}>
             {/* the handle: drag it to move the panel; double-click sends it home */}
             <div class="sticky -top-2 -mx-2 -mt-2 px-2 py-1 text-dim select-none flex items-baseline gap-2" style={{ cursor: "move", background: "rgba(0,0,0,0.7)" }} onMouseDown={dragCorner} onDblClick={() => { setCornerAt(null); try { localStorage.removeItem("walkshop.corner"); } catch {} }} data-corner-handle>
               <span>⋮⋮ chat</span>
@@ -466,7 +482,7 @@ export default function Chat() {
             </For>
           </div>
           <Show when={pins().length} fallback={<div class="text-dim text-xs">nothing pinned: [pin] a block in the chat, ask for a dashboard, or tell the agent what to put here</div>}>
-            <div class="grid gap-3" style={{ "grid-template-columns": "repeat(auto-fit, minmax(340px, 1fr))" }} data-grid>
+            <div class="grid gap-3" style={{ "grid-template-columns": "repeat(auto-fit, minmax(min(340px, 100%), 1fr))" }} data-grid>
               <For each={pins()}>
                 {(p) => {
                   const Widget = WIDGETS[p.name];
@@ -527,15 +543,16 @@ export default function Chat() {
             data-chat-input
           />
           {/* the state, stuck to the bottom with the prompt */}
-          <span class="text-xs whitespace-nowrap" data-agent-status={agent().busy ? "working" : "idle"}>
+          <span class="text-xs whitespace-nowrap min-w-0 overflow-hidden text-ellipsis" data-agent-status={agent().busy ? "working" : "idle"}>
             <span class={agent().busy ? "text-yellow" : "text-dim"}>{agent().busy ? "● working" : "○ idle"}</span>
             <span class="text-dim">
               {() => (agent().live ? ` · ${agent().live} live` : "")}
               {() => (agent().watches ? ` · ${agent().watches} watch${agent().watches === 1 ? "" : "es"}` : "")}
-              {() => (agent().queued ? ` · ${agent().queued} queued` : "")}
+              {() => (agent().queued ? ` · ${agent().queued} ${agent().auto === false ? "held" : "queued"}` : "")}
+              {() => (agent().auto === false ? " · auto off" : "")}
               {() => (agent().pinned ? ` · ${agent().pinned} pinned` : "")}
-              {() => (model() ? ` · ${model()}` : "")}
             </span>
+            <span class="text-dim hidden sm:inline">{() => (model() ? ` · ${model()}` : "")}</span>
           </span>
         </div>
       </div>

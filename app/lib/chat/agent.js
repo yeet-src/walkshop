@@ -21,6 +21,11 @@ const argOf = (name) => {
   return typeof v === "string" && v.length > 0 ? v : null;
 };
 const MODEL = argOf("model") ?? "claude-opus-5";
+/* Whether a watch may wake the agent. Off, a watch still runs and shows
+ * its result, but its fires are held — the newest per watch — until the
+ * switch is on again. Shared by every viewer, like the chat; the boot
+ * default comes from `auto` in yeet.args (yeetkit.config.js / --auto). */
+let auto = !/^(0|false|off|no)$/i.test(argOf("auto") ?? "true");
 
 const MAX_TURNS = 5;
 const MAX_TOKENS = 3000;
@@ -124,13 +129,21 @@ setBoard({
 /* The chat's state, for the header: pushed whenever it changes, and
  * answered to a fresh page. */
 export async function status() {
-  return { busy: Boolean(current), queued: wakes.size, pinned: pinsMap.size, ...counts() };
+  return { busy: Boolean(current), queued: wakes.size, pinned: pinsMap.size, auto, ...counts() };
+}
+
+/** Turn self-triggering on or off; held wakes drain when it comes back. Answers the status. */
+export async function setAuto(on) {
+  auto = Boolean(on);
+  announce();
+  if (auto) drain();
+  return status();
 }
 const announce = () => status().then((st) => push({ op: "walkshop-chat", status: st })).catch(() => {});
 onChange(announce);
 
 function drain() {
-  if (current || !wakes.size) return;
+  if (current || !wakes.size || !auto) return;
   const [id, w] = wakes.entries().next().value;
   wakes.delete(id);
   const text = `[watch "${w.title}" fired at ${clock(w.at)}${w.fires > 1 ? `, fire ${w.fires}` : ""}]\n${typeof w.payload === "string" ? w.payload : JSON.stringify(w.payload)}`;
@@ -228,6 +241,7 @@ async function turn(reply, run) {
     const tiles = [...pinsMap.values()].map((p, i) => `${i}: ${p.name}${p.attrs?.title ? ` "${p.attrs.title}"` : ""} span ${p.span}`).join("; ");
     convo.push({ role: "user", content: `[the dashboard now has ${pinsMap.size} tile${pinsMap.size === 1 ? "" : "s"}: ${tiles}. Change it with board.* in a js call when the request is about it; a new block with pin=true adds a tile.]` });
   }
+  if (!auto) convo.push({ role: "user", content: "[self-triggering is off: a watch block still runs and shows its result on the page, but it will not wake you. Do not promise to come back on your own; say what to look at instead.]" });
   try {
     for (let t = 0; t < MAX_TURNS && !run.cancelled; t++) {
       const last = t === MAX_TURNS - 1;

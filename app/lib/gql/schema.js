@@ -291,6 +291,7 @@ places live instruments — and it has a door:
 | \`POST /api/chat?stream=1\` | the same, the reply streamed as text as it is written, then one line of JSON with the blocks |
 | \`GET /api/chat\` | the conversation so far |
 | \`DELETE /api/chat\` | clear it and stop its instruments |
+| \`PATCH /api/chat\` with \`{ "auto": false }\` | self-triggering off: a watch keeps running and showing but no longer wakes the agent; its newest fire is held until \`{ "auto": true }\`. The page's \`[auto on/off]\` is the same switch |
 
 The conversation is one and shared: a message posted here appears on
 every open chat page, and so does the reply. A block in the reply is

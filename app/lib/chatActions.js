@@ -2,7 +2,7 @@
 
 /* The chat island's hop into the isolate. */
 
-import { clearChat, history, info, pin, pins, send, status, unpin } from "./chat/agent.js";
+import { clearChat, history, info, pin, pins, send, setAuto, status, unpin } from "./chat/agent.js";
 import { liveBlocks, stopBlock } from "./chat/run.js";
 
 export async function chatSend(text) {
@@ -25,6 +25,9 @@ export async function chatInfo() {
 }
 export async function chatStatus() {
   return status();
+}
+export async function chatAuto(on) {
+  return setAuto(Boolean(on));
 }
 export async function chatPins() {
   return pins();
