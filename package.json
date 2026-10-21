@@ -1,0 +1,16 @@
+{
+  "name": "walkshop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "make bpf && yeetkit dev",
+    "build": "yeetkit build",
+    "start": "yeetkit start",
+    "check": "yeetkit build && yeetkit check",
+    "test": "node --test test/",
+    "test:wire": "node test/wire/browser.mjs --port 3600"
+  },
+  "dependencies": {
+    "yeetkit": "file:vendor/yeetkit"
+  }
+}
