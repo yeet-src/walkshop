@@ -612,7 +612,7 @@ export default function Chat() {
                 {" · not logged in · "}
                 <Show when={auth().login?.url} fallback={<button class="underline hover:text-fg" onClick={logIn} data-login>[log in]</button>}>
                   <a class="underline hover:text-fg" href={auth().login.url} target="_blank" rel="noopener" data-login>
-                    log in{auth().login.code ? ` (code ${auth().login.code})` : ""}
+                    log in
                   </a>
                   <span class="text-dim"> · waiting…</span>
                 </Show>

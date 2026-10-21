@@ -50,7 +50,6 @@ export default function Gate(props) {
             }>
               <p>
                 <a class="text-blue underline hover:text-fg" href={auth().login.url} target="_blank" rel="noopener" data-login>{auth().login.url}</a>
-                {auth().login.code ? <span class="text-dim"> · code {auth().login.code}</span> : null}
                 <span class="text-dim"> · waiting…</span>
               </p>
             </Show>
