@@ -34,6 +34,13 @@ export default function Try() {
 | transform { const m = /^(GET|POST|PUT|DELETE|HEAD|PATCH) (\\S+) HTTP/.exec($.req ?? ""); if (!m) return null; const k = m[1] + " " + m[2]; const p = paths[k] ??= { requests: 0, bytes: 0 }; p.requests++; p.bytes += $.len; return { route: k, to: $.daddr, requests: p.requests, bytes: p.bytes }; }'`,
     },
     {
+      what: "Jellyfin on this host (port 8096): what each client has been served, in MB, and the request behind it",
+      cmd: `curl -sN '${origin}/api/query?stream=1' -H 'content-type: application/graphql' -d '
+{ tcp(ports: [8096], data: true) { hook comm daddr len req: payload(len: 120, kind: text) } }
+| context   { const served = {}; }
+| transform { if ($.hook === "tx" && $.comm !== "curl") served[$.daddr] = (served[$.daddr] ?? 0) + $.len; const m = /^(GET|POST) (\\S+) HTTP/.exec($.req ?? ""); if (!m && $.hook !== "tx") return null; return { client: $.daddr, mb: Math.round((served[$.daddr] ?? 0) / 1e4) / 100, asked: m ? m[2].replace(/\\?.*$/, "") : null }; }'`,
+    },
+    {
       what: "one shot, JSON, five rows or two seconds",
       cmd: `curl -s ${origin}/api/query -H 'content-type: application/graphql' -d '{ tcp(limit: 5, ms: 2000) { hook daddr dport cwnd } }'`,
     },

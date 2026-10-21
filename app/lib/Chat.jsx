@@ -41,7 +41,7 @@ function Source(props) {
   );
 }
 
-const EXAMPLES = ["who is this box talking to right now?", "srtt per peer, live", "show me the last HTTP requests", "bytes per peer as bars, cumulative", "draw the packet rate on a canvas"];
+const EXAMPLES = ["who is this box talking to right now?", "srtt per peer, live", "show me the last HTTP requests", "who is streaming from jellyfin (port 8096), and how many MB each", "draw the packet rate on a canvas"];
 
 export default function Chat() {
   /* The transcript is a store reconciled by id, not a signal of fresh
