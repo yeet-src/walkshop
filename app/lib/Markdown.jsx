@@ -3,6 +3,8 @@
  * bold. Nothing is interpreted as HTML. Runs in the isolate. */
 import { For } from "yeetkit";
 
+import Code from "./Code.jsx";
+
 /* Inline: `code` and **bold**, left to right. */
 function inline(text) {
   const out = [];
@@ -85,7 +87,7 @@ export default function Markdown(props) {
             case "h3":
               return <h3 class="text-yellow mt-4">{b.text}</h3>;
             case "code":
-              return <pre class="overflow-x-auto border border-dim p-2 text-xs text-green whitespace-pre">{b.body}</pre>;
+              return <Code lang={b.lang} text={b.body} />;
             case "table":
               return (
                 <table class="text-left text-xs">

@@ -60,7 +60,7 @@ const evaluate = async (expression) => (await cdp("Runtime.evaluate", { expressi
 await cdp("Page.enable");
 await cdp("Runtime.enable");
 await cdp("Log.enable");
-await cdp("Page.navigate", { url: `http://127.0.0.1:${port}/chat` });
+await cdp("Page.navigate", { url: `http://127.0.0.1:${port}${at("--path", "/chat")}` });
 for (let i = 0; i < 160; i += 1) {
   await wait(250);
   if (await evaluate(`Boolean(document.querySelector("[data-chat-input]"))`)) break;

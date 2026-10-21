@@ -28,7 +28,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * and `ts` (kernel ns) stay, named plainly. */
 function plain(row) {
   const { _seq, _raw, _len, _ts, _at, ...rest } = row;
-  const out = { ...rest };
+  const out = {};
+  /* a reshaping transform leaves the selection's columns undefined: those go */
+  for (const [k, v] of Object.entries(rest)) if (v !== undefined) out[k] = v;
   if (_at != null) out.at = _at;
   if (_ts != null) out.ts = _ts;
   if (_len != null && !("len" in out)) out.len = _len;
@@ -99,7 +101,9 @@ function streamed(query, { markdown, signal }) {
             for (const row of p.rows?.[root] ?? []) {
               const r = plain(row);
               if (markdown) {
-                if (!headers[root]) headers[root] = (p.columns?.[root] ?? []).map((c) => c.key).concat(["at"]);
+                /* The header is the first row's keys: with a pipeline that
+                 * reshapes rows, those are the transform's, not the selection's. */
+                if (!headers[root]) headers[root] = Object.keys(r);
                 if (root !== lastRoot) write(`${lastRoot ? "\n" : ""}### ${root}\n\n${header(headers[root])}\n`);
                 write(`${line(r, headers[root])}\n`);
               } else {

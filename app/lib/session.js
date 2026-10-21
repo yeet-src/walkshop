@@ -144,7 +144,9 @@ export async function startRun(id, text, { push: pushRows = false, forever = tru
       }
       run.columns[key] = cols;
     }
-    const flat = flatten(shaped, run.columns[key] ?? []);
+    /* A reshaped row has the keys the transform returned, no more: the
+     * selection's columns are not padded in as empty cells. */
+    const flat = reshaped ? flattenDeep(shaped) : flatten(shaped, run.columns[key] ?? []);
     flat._seq = ++seq;
     /* The packet's payload length rides along, so an empty window can
      * say whether there was nothing to read or the read failed. */

@@ -3,6 +3,8 @@
  * Browser side (solid-js), a twin of lib/Markdown.jsx for the isolate. */
 import { For } from "solid-js";
 
+import CodeView from "../CodeView.jsx";
+
 function inline(text) {
   const out = [];
   const re = /(`[^`]+`|\*\*[^*]+\*\*)/g;
@@ -26,11 +28,12 @@ function blocks(md) {
   while (i < lines.length) {
     const l = lines[i];
     if (l.startsWith("```")) {
+      const lang = l.slice(3).trim();
       const body = [];
       i++;
       while (i < lines.length && !lines[i].startsWith("```")) body.push(lines[i++]);
       i++;
-      out.push({ t: "code", body: body.join("\n") });
+      out.push({ t: "code", lang, body: body.join("\n") });
       continue;
     }
     const h = /^(#{1,3})\s+(.*)$/.exec(l);
@@ -74,7 +77,7 @@ export default function Md(props) {
             case "h3":
               return <div class="text-yellow">{b.text}</div>;
             case "code":
-              return <pre class="overflow-x-auto border border-dim p-2 text-xs text-green whitespace-pre">{b.body}</pre>;
+              return <CodeView lang={b.lang} text={b.body} />;
             case "table":
               return (
                 <table class="text-left text-xs">
