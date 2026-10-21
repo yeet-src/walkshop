@@ -27,6 +27,13 @@ export default function Try() {
 | transform { const k = $.daddr + ":" + $.dport; const p = peers[k] ??= { packets: 0, bytes: 0 }; p.packets++; p.bytes += $.len; return { peer: k, packets: p.packets, bytes: p.bytes, srtt_ms: $.srtt == null ? null : Math.round($.srtt / 80) / 100 }; }'`,
     },
     {
+      what: "requests and bytes by URL path: the request line is read from the payload, the transform keeps a count per method and path",
+      cmd: `curl -sN '${origin}/api/query?stream=1' -H 'content-type: application/graphql' -d '
+{ tcp(ports: [80], data: true) { daddr len req: payload(len: 160, kind: text) } }
+| context   { const paths = {}; }
+| transform { const m = /^(GET|POST|PUT|DELETE|HEAD|PATCH) (\\S+) HTTP/.exec($.req ?? ""); if (!m) return null; const k = m[1] + " " + m[2]; const p = paths[k] ??= { requests: 0, bytes: 0 }; p.requests++; p.bytes += $.len; return { route: k, to: $.daddr, requests: p.requests, bytes: p.bytes }; }'`,
+    },
+    {
       what: "one shot, JSON, five rows or two seconds",
       cmd: `curl -s ${origin}/api/query -H 'content-type: application/graphql' -d '{ tcp(limit: 5, ms: 2000) { hook daddr dport cwnd } }'`,
     },
