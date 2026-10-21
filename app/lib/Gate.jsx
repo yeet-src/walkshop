@@ -5,7 +5,7 @@
  * isolate, so it asks auth.js directly and polls while logged out. */
 import { createSignal, onCleanup, Show } from "yeetkit";
 
-import { authStatus, startLogin } from "./auth.js";
+import { authStatus, onAuth, startLogin } from "./auth.js";
 
 export default function Gate(props) {
   const [auth, setAuth] = createSignal(null); /* null: not yet asked */
@@ -18,9 +18,14 @@ export default function Gate(props) {
     }
   };
   check();
-  /* often while logged out, so the claim is noticed within seconds; now and then otherwise */
-  const timer = setInterval(() => (auth()?.ok ? Math.random() < 0.2 && check() : check()), 5000);
-  onCleanup(() => clearInterval(timer));
+  /* The moment a login lands, auth.js says so; the poll is the fallback
+   * (a login claimed through another page, or `yeet login` on the host). */
+  const off = onAuth((state) => setAuth(state));
+  const timer = setInterval(() => (auth()?.ok ? Math.random() < 0.2 && check() : check()), 2000);
+  onCleanup(() => {
+    off();
+    clearInterval(timer);
+  });
 
   const logIn = async () => {
     setBusy(true);

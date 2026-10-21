@@ -11,6 +11,23 @@ import { push } from "./lane.js";
 
 let flow = null; /* the login in progress: { code, url, at } */
 
+/* Who wants to hear the moment a login lands: the gate, in this same
+ * isolate, so it does not wait for its next poll. */
+const listeners = new Set();
+export const onAuth = (fn) => {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+};
+const tell = (state) => {
+  for (const fn of listeners) {
+    try {
+      fn(state);
+    } catch {
+      /* a listener's problem */
+    }
+  }
+};
+
 const whoami = async () => {
   try {
     const w = await yeet.whoami();
@@ -50,11 +67,15 @@ export async function startLogin() {
     })
       .then((who) => {
         if (flow === f) flow = null;
+        const state = { ok: true, host: who?.host_id, owner: who?.owner_id, login: null };
         push({ op: "walkshop-chat", login: { ok: true, host: who?.host_id, owner: who?.owner_id } });
+        tell(state);
       })
       .catch((e) => {
         if (flow === f) flow = null;
-        push({ op: "walkshop-chat", login: { ok: false, error: String(e?.message ?? e) } });
+        const state = { ok: false, error: String(e?.message ?? e), login: null };
+        push({ op: "walkshop-chat", login: { ok: false, error: state.error } });
+        tell(state);
       });
     await Promise.race([got, new Promise((r) => setTimeout(r, 4000))]);
   }
