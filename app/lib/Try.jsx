@@ -51,7 +51,7 @@ export default function Try() {
       <For each={examples}>
         {(ex) => (
           <div>
-            <div class="text-dim"># {ex.what}</div>
+            <div class="text-fg">{ex.what}</div>
             <CodeView lang="sh" text={ex.cmd} wrap />
           </div>
         )}
