@@ -181,12 +181,13 @@ static __always_inline int handle(struct __sk_buff *skb, __u8 hook)
     e->regs[R_CTX] = (__u64) skb;
 
     /* Egress runs in the sender's context; ingress is a softirq, where
-     * "current" is whoever was interrupted and means nothing. */
+     * "current" is whoever was interrupted and means nothing. The ids
+     * come off the task, not bpf_get_current_pid_tgid(): that helper
+     * is only open to TC programs from 6.9, and 6.6 rejects the load. */
     if (hook == HOOK_TX) {
-        __u64 id = bpf_get_current_pid_tgid();
-        e->pid = (__u32) (id >> 32);
-        e->tid = (__u32) id;
         struct task_struct *t = bpf_get_current_task_btf();
+        e->pid = (__u32) BPF_CORE_READ(t, tgid);
+        e->tid = (__u32) BPF_CORE_READ(t, pid);
         BPF_CORE_READ_STR_INTO(&e->comm, t, comm);
     }
 
