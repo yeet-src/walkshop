@@ -4,6 +4,7 @@ import { Link, createSignal, onCleanup } from "yeetkit";
 
 import { probes } from "@/lib/query.js";
 import { ROOTS } from "@/lib/roots.js";
+import Try from "@/lib/Try.jsx";
 
 export default function Home() {
   const [live, setLive] = createSignal({ attached: [], errors: [] });
@@ -44,6 +45,9 @@ export default function Home() {
           ))}
         </tbody>
       </table>
+
+      <h2 class="comment">from a shell</h2>
+      <Try />
 
       <h2 class="comment">attached now</h2>
       <table class="w-full text-left">
