@@ -316,7 +316,7 @@ async function turn(reply, run) {
     const msg = String(e?.message ?? e);
     /* The daemon answers for the account it was logged in as; after a
      * restart it may have none until `yeet login` runs again. */
-    reply.error = /WhoAmI/.test(msg) ? `${msg} — the daemon has no account: run \`yeet login\` on the host, then ask again` : msg;
+    reply.error = /WhoAmI/.test(msg) ? `${msg} — the daemon has no account: log in from the bar below (or \`yeet login\` on the host), then ask again` : msg;
   } finally {
     if (current === run) current = null;
     frame(reply, { text: reply.text, done: true, error: reply.error ?? null, steps: reply.steps });

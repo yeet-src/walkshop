@@ -2,6 +2,7 @@
 
 /* The chat island's hop into the isolate. */
 
+import { authStatus, startLogin } from "./auth.js";
 import { clearChat, history, info, pin, pins, send, setAuto, status, unpin } from "./chat/agent.js";
 import { liveBlocks, stopBlock } from "./chat/run.js";
 
@@ -37,4 +38,10 @@ export async function chatPin(id, span) {
 }
 export async function chatUnpin(id) {
   return unpin(String(id ?? ""));
+}
+export async function chatAuth() {
+  return authStatus();
+}
+export async function chatLogin() {
+  return startLogin();
 }

@@ -27,13 +27,15 @@ const EXAMPLES = {
     hook comm pid len
     line: payload()
 } }`,
-  jellyfin: `{ tcp(ports: [8096], data: true) { hook comm daddr len req: payload(len: 120, kind: text) } }
+  jellyfin: `{ tcp(ports: [8096], data: true) { sport dport saddr daddr len req: payload(len: 120, kind: text) } }
 | context   { const served = {}; }
 | transform {
-  // what each client has been sent so far, and the request that asked for it
-  if ($.hook === "tx" && $.comm !== "curl") served[$.daddr] = (served[$.daddr] ?? 0) + $.len;
+  // the server's port says which way the packet goes: from it, the client is daddr; to it, saddr
+  const client = $.sport === 8096 ? $.daddr : $.saddr;
+  if ($.sport === 8096) served[client] = (served[client] ?? 0) + $.len;
   const m = /^(GET|POST) (\\S+) HTTP/.exec($.req ?? "");
-  return { client: $.daddr, mb: Math.round((served[$.daddr] ?? 0) / 1e4) / 100, asked: m ? m[2].replace(/\\?.*$/, "") : null };
+  if (!m && $.sport !== 8096) return null;           // a client packet without a request line says nothing
+  return { client, mb: Math.round((served[client] ?? 0) / 1e4) / 100, asked: m ? m[2].replace(/\\?.*$/, "") : null };
 }`,
   transform: `{ tcp(ports: [80, 443]) { hook comm daddr dport len cwnd } }   # no data: true — the transform drops the empty ones
 | context {

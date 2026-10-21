@@ -11,7 +11,7 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { createStore, reconcile, unwrap } from "solid-js/store";
 
-import { chatAuto, chatClear, chatHistory, chatInfo, chatPin, chatPins, chatSend, chatStatus, chatStop, chatUnpin } from "./chatActions.js";
+import { chatAuth, chatAuto, chatClear, chatHistory, chatInfo, chatLogin, chatPin, chatPins, chatSend, chatStatus, chatStop, chatUnpin } from "./chatActions.js";
 import { parseBlocks } from "./chat/blocks.js";
 import { tidyJs, tokenizeJs } from "./chat/js.js";
 import Md from "./chat/Md.jsx";
@@ -41,7 +41,7 @@ function Source(props) {
   );
 }
 
-const EXAMPLES = ["who is this box talking to right now?", "srtt per peer, live", "show me the last HTTP requests", "who is streaming from jellyfin (port 8096), and how many MB each", "draw the packet rate on a canvas"];
+const EXAMPLES = ["who is this box talking to right now?", "srtt per peer, live", "show me the last HTTP requests", "who is streaming from jellyfin (port 8096: the client is daddr when sport is 8096, saddr otherwise), MB served each", "draw the packet rate on a canvas"];
 
 export default function Chat() {
   /* The transcript is a store reconciled by id, not a signal of fresh
@@ -78,6 +78,16 @@ export default function Chat() {
   const [busy, setBusy] = createSignal(false);
   const [following, setFollowing] = createSignal(true); /* tailing: at the bottom, so new text scrolls into view */
   const [model, setModel] = createSignal("");
+  /* The host's account: { ok, login: { code, url } | null }. Unknown until
+   * the isolate answers; a reply that failed for want of one flips it. */
+  const [auth, setAuth] = createSignal({ ok: true, login: null });
+  const logIn = () =>
+    chatLogin()
+      .then((a) => {
+        setAuth(a);
+        if (a.login?.url) window.open(a.login.url, "_blank", "noopener");
+      })
+      .catch(() => {});
   const [agent, setAgent] = createSignal({ busy: false, queued: 0, live: 0, watches: 0, pinned: 0, auto: true }); /* the shared state, pushed by the isolate */
   const [pinStore, setPins] = createStore([]); /* the dashboard: shared, pushed by the isolate, keyed by id */
   const pins = () => pinStore;
@@ -190,6 +200,12 @@ export default function Chat() {
         takePins(f.pins);
         return;
       }
+      if (f.login && !f.id) {
+        if (f.login.ok) setAuth({ ok: true, login: null });
+        else if (f.login.pending) setAuth({ ok: false, login: { code: f.login.code, url: f.login.url } });
+        else setAuth({ ok: false, login: null, error: f.login.error });
+        return;
+      }
       const m = { ...cur, role: f.role ?? cur.role, status: f.status ?? cur.status, at: f.at ?? cur.at, kind: f.kind ?? cur.kind };
       if (f.text != null) m.text = f.text;
       if (f.delta) m.text = (m.text ?? "") + f.delta;
@@ -204,6 +220,7 @@ export default function Chat() {
       if (f.done) {
         m.status = f.error ? "error" : "done";
         m.error = f.error ?? null;
+        if (f.error && /WhoAmI/.test(f.error)) chatAuth().then(setAuth).catch(() => {});
       }
       upsert(m);
       if (f.done) setBusy(false);
@@ -229,6 +246,7 @@ export default function Chat() {
 
   onMount(async () => {
     chatInfo().then((i) => setModel(i.model)).catch(() => {});
+    chatAuth().then(setAuth).catch(() => {});
     chatPins().then(takePins).catch(() => {});
     chatStatus().then((st) => { setAgent(st); setBusy(Boolean(st.busy)); }).catch(() => {});
     try {
@@ -584,6 +602,17 @@ export default function Chat() {
               {() => (agent().pinned ? ` · ${agent().pinned} pinned` : "")}
             </span>
             <span class="text-dim hidden sm:inline">{() => (model() ? ` · ${model()}` : "")}</span>
+            <Show when={!auth().ok}>
+              <span class="text-yellow" data-auth="out">
+                {" · not logged in · "}
+                <Show when={auth().login?.url} fallback={<button class="underline hover:text-fg" onClick={logIn} data-login>[log in]</button>}>
+                  <a class="underline hover:text-fg" href={auth().login.url} target="_blank" rel="noopener" data-login>
+                    log in{auth().login.code ? ` (code ${auth().login.code})` : ""}
+                  </a>
+                  <span class="text-dim"> · waiting…</span>
+                </Show>
+              </span>
+            </Show>
           </span>
         </div>
       </div>
