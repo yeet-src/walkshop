@@ -13,8 +13,9 @@
  *
  * Streamed, the run is a session run — the same thing a workbench tab
  * is — polled here and written out as it fills; it ends when `limit`
- * or `ms` is reached, or when the client hangs up. A query without
- * either runs until the client does. */
+ * or `ms` is reached, or when the client hangs up. A query that names
+ * neither runs until the client does: streamed, the defaults of 50 rows
+ * and 2 s do not apply. */
 
 import { close, poll, start } from "@/lib/actions.js";
 import { header, line, table } from "@/lib/gql/markdown.js";
@@ -73,7 +74,7 @@ function streamed(query, { markdown, signal }) {
   const stream = new ReadableStream({
     async start(controller) {
       const write = (s) => controller.enqueue(encoder.encode(s));
-      const started = await start(null, query, { forever: false });
+      const started = await start(null, query, { forever: "open" });
       id = started.id;
       if (started.errors?.length) {
         for (const e of started.errors) write(markdown ? `> error: ${e.message}\n` : `${JSON.stringify({ errors: started.errors })}\n`);

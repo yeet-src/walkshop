@@ -23,7 +23,7 @@ async function isDirect() {
 }
 
 export async function start(id, text, opts = {}) {
-  return startRun(id ?? null, String(text ?? ""), { push: await isDirect(), forever: opts.forever !== false });
+  return startRun(id ?? null, String(text ?? ""), { push: await isDirect(), forever: opts.forever === "open" ? "open" : opts.forever !== false });
 }
 
 /** Where the rows stream from in direct mode: the console lane's port. */

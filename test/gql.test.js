@@ -101,3 +101,9 @@ test("meta roots plan; the docs name every root", () => {
   for (const name of Object.keys(ROOTS)) assert.ok(DOCS.includes(`### ${name}`));
   assert.ok(SDL.includes("type Query"));
 });
+
+test("plan: a root remembers which args the query wrote, so a stream can lift the defaults", () => {
+  assert.deepEqual(plan("{ tcp { hook } }").roots[0].given, []);
+  assert.deepEqual(plan("{ tcp(limit: 3) { hook } }").roots[0].given, ["limit"]);
+  assert.deepEqual(plan("{ tcp(limit: 3) { hook } }").roots[0].args.ms, 2000);
+});

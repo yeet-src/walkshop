@@ -109,7 +109,8 @@ A query that yields no data at all is a 400.
 
 Stream when the window is long: a one-shot call must finish inside
 about 30 s, a streamed run has as long as you keep reading, and a query
-with neither \`limit\` nor \`ms\` streams until you close the connection.
+that names neither \`limit\` nor \`ms\` streams until you close the
+connection (streamed, the defaults of 50 rows and 2 s do not apply).
 Streamed rows carry \`at\` (host clock, ms) and \`ts\` (kernel clock, ns).
 In a Markdown stream a cell is one line (a newline in a payload shows
 as ⏎), errors are \`> error:\` lines and a meta root is a fenced JSON

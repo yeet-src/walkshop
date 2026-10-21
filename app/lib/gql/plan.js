@@ -218,7 +218,7 @@ function planRoot(sel) {
 
   const layout = walk(sel.selections, null, [], []);
   if (ctx.entries.length > MAX_FIELDS) fail(sel.line, `${ctx.entries.length} VM fields on ${root.name}; the VM runs ${MAX_FIELDS} per root (prefix columns are free)`);
-  return { kind: "root", key: sel.alias ?? sel.name, root: root.name, args, entries: ctx.entries, columns: ctx.columns, filters: ctx.filters, layout, line: sel.line };
+  return { kind: "root", key: sel.alias ?? sel.name, root: root.name, args, given: Object.keys(sel.args ?? {}), entries: ctx.entries, columns: ctx.columns, filters: ctx.filters, layout, line: sel.line };
 }
 
 function planMeta(sel) {

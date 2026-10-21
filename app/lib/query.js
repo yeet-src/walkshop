@@ -100,7 +100,12 @@ export async function execute(text, { onRow, stop, forever = false } = {}) {
          * arm the slot; a register value is the cheapest. */
         const fields = c.fields.length ? c.fields : await compileFields(btf, ROOTS[p.root], [{ name: "__arm", term: { kind: "reg", reg: 7 } }]);
         try {
-          const args = forever ? { ...p.args, limit: Infinity, ms: Infinity } : p.args;
+          /* `forever: true` ignores limit and ms (the workbench: stop ends
+           * a run); `"open"` keeps the ones the query wrote and lifts the
+           * defaults (the HTTP stream: a query that names neither runs
+           * until the client hangs up). */
+          const given = (k) => (p.given ?? []).includes(k);
+          const args = forever === "open" ? { ...p.args, ...(given("limit") ? {} : { limit: Infinity }), ...(given("ms") ? {} : { ms: Infinity }) } : forever ? { ...p.args, limit: Infinity, ms: Infinity } : p.args;
           const rows = await capture(
             p.root,
             fields,
