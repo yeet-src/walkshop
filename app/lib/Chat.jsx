@@ -8,7 +8,8 @@
  * the data lane as a reply streams. A reply's `:::<object>` blocks
  * are drawn as widgets; the block's body ran on the host and its
  * snapshot arrives on the same lane, matched by id. */
-import { createEffect, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createStore, reconcile, unwrap } from "solid-js/store";
 
 import { chatAuto, chatClear, chatHistory, chatInfo, chatPin, chatPins, chatSend, chatStatus, chatStop, chatUnpin } from "./chatActions.js";
 import { parseBlocks } from "./chat/blocks.js";
@@ -43,14 +44,43 @@ function Source(props) {
 const EXAMPLES = ["who is this box talking to right now?", "srtt per peer, live", "show me the last HTTP requests", "bytes per peer as bars, cumulative", "draw the packet rate on a canvas"];
 
 export default function Chat() {
-  const [messages, setMessages] = createSignal([]); /* { id, role, text, status, error, steps } */
+  /* The transcript is a store reconciled by id, not a signal of fresh
+   * arrays: a streamed token changes one message's text in place, so
+   * the <For> keeps that message's DOM — and the charts in it — rather
+   * than tearing it down and mounting it again for every delta. */
+  const [messages, setMessages] = createStore([]); /* { id, role, text, status, error, steps } */
+  const replaceMessages = (list) => setMessages(reconcile(list, { key: "id", merge: true }));
+
+  /* The same for a message's blocks: parsing the text again yields new
+   * segment objects, so each is a small store keyed by block id (or by
+   * place, for prose and the block still being written) that is updated
+   * in place while the text grows. */
+  const useSegments = (text) => {
+    const cache = new Map();
+    return createMemo(() => {
+      const list = parseBlocks(text() ?? "");
+      const seen = new Set();
+      const out = list.map((seg, i) => {
+        const key = seg.t === "block" ? `b:${seg.id}` : `${seg.t}:${i}`;
+        seen.add(key);
+        let entry = cache.get(key);
+        if (entry) entry[1](reconcile(seg, { merge: true }));
+        else cache.set(key, (entry = createStore(seg)));
+        return entry[0];
+      });
+      for (const k of cache.keys()) if (!seen.has(k)) cache.delete(k);
+      return out;
+    });
+  };
+  const EMPTY = {};
   const [ui, setUi] = createSignal({}); /* block id → { data, error, runs, ms, live, expired } */
   const [draft, setDraft] = createSignal("");
   const [busy, setBusy] = createSignal(false);
   const [following, setFollowing] = createSignal(true); /* tailing: at the bottom, so new text scrolls into view */
   const [model, setModel] = createSignal("");
   const [agent, setAgent] = createSignal({ busy: false, queued: 0, live: 0, watches: 0, pinned: 0, auto: true }); /* the shared state, pushed by the isolate */
-  const [pins, setPins] = createSignal([]); /* the dashboard: shared, pushed by the isolate */
+  const [pinStore, setPins] = createStore([]); /* the dashboard: shared, pushed by the isolate, keyed by id */
+  const pins = () => pinStore;
   const [dash, setDash] = createSignal(false); /* the overlay, yours */
   /* The corner panel's place: drag its top bar anywhere; remembered
    * per browser. Null means the default corner. */
@@ -99,7 +129,7 @@ export default function Chat() {
   const FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
   const LABEL = { thinking: "thinking", tool: "looking", streaming: "writing", working: "working" };
   const phase = () => {
-    const last = [...messages()].reverse().find((m) => m.role === "assistant");
+    const last = [...messages].reverse().find((m) => m.role === "assistant");
     const st = last?.status;
     if (st === "thinking" || st === "tool" || st === "streaming") return st;
     return agent().busy ? "working" : null;
@@ -136,23 +166,21 @@ export default function Chat() {
     if (following()) requestAnimationFrame(toBottom);
   };
 
-  const upsert = (m) =>
-    setMessages((list) => {
-      const i = list.findIndex((x) => x.id === m.id);
-      if (i < 0) return [...list, m];
-      const next = list.slice();
-      next[i] = { ...next[i], ...m };
-      return next;
-    });
+  const upsert = (m) => {
+    const list = unwrap(messages);
+    const i = list.findIndex((x) => x.id === m.id);
+    const next = i < 0 ? [...list, m] : list.map((x, j) => (j === i ? { ...x, ...m } : x));
+    replaceMessages(next);
+  };
 
   const onFrame = (f) => {
     if (f.op === "walkshop-chat") {
       if (f.cleared) {
-        setMessages([]);
+        replaceMessages([]);
         setUi({});
         return;
       }
-      const cur = messages().find((x) => x.id === f.id) ?? { id: f.id, role: f.role, text: "", steps: [] };
+      const cur = unwrap(messages).find((x) => x.id === f.id) ?? { id: f.id, role: f.role, text: "", steps: [] };
       if (f.status && typeof f.status === "object" && !f.id) {
         setAgent(f.status);
         setBusy(Boolean(f.status.busy));
@@ -191,7 +219,7 @@ export default function Chat() {
   /* A pin carries the block's last snapshot, so a page that arrives
    * late can draw it before the next frame. */
   const takePins = (list) => {
-    setPins(list);
+    setPins(reconcile(list, { key: "id", merge: true }));
     setUi((u) => {
       const n = { ...u };
       for (const p of list) if (p.last && !n[p.id]?.data) n[p.id] = { ...(n[p.id] ?? {}), ...p.last, name: p.name, attrs: p.attrs };
@@ -204,7 +232,7 @@ export default function Chat() {
     chatPins().then(takePins).catch(() => {});
     chatStatus().then((st) => { setAgent(st); setBusy(Boolean(st.busy)); }).catch(() => {});
     try {
-      setMessages(await chatHistory());
+      replaceMessages(await chatHistory());
     } catch {
       /* the lane will fill it in */
     }
@@ -309,7 +337,7 @@ export default function Chat() {
       </div>
 
       <div class="space-y-4 flex-1">
-        <For each={messages()}>
+        <For each={messages}>
           {(m) => (
             <div class="space-y-2" data-message={m.id} data-role={m.role} data-status={m.status}>
               <Show when={m.role === "user"}>
@@ -358,7 +386,7 @@ export default function Chat() {
                 <Show when={m.status === "thinking" || m.status === "tool"}>
                   <div class="text-dim text-xs">{m.status === "tool" ? "looking…" : "thinking…"}</div>
                 </Show>
-                <For each={parseBlocks(m.text ?? "")}>
+                <For each={useSegments(() => m.text)()}>
                   {(seg) =>
                     seg.t === "md" ? (
                       <Md text={seg.text} />
@@ -371,7 +399,10 @@ export default function Chat() {
                       <div class="border-l border-dim pl-3 space-y-1" data-block={seg.id} data-object={seg.name}>
                         {(() => {
                           const Widget = WIDGETS[seg.name];
-                          const u = () => ui()[seg.id] ?? {};
+                          /* A memo on this block's own entry: another block's
+                           * frame replaces the map but not this entry, so the
+                           * widget below does not redraw for it. */
+                          const u = createMemo(() => ui()[seg.id] ?? EMPTY);
                           /* The source shows while the block is being written and
                            * until it has drawn; then the widget takes its place and
                            * the source is a fold away. */
@@ -451,17 +482,17 @@ export default function Chat() {
               <span>⋮⋮ chat</span>
               <span class="ml-auto">drag · double-click to reset</span>
             </div>
-            <Show when={!messages().length}>
+            <Show when={!messages.length}>
               <div class="text-dim">say what to put on the board</div>
             </Show>
-            <For each={messages().slice(-6)}>
+            <For each={messages.slice(-6)}>
               {(m) => (
                 <div class={m.role === "user" ? (m.kind === "wake" ? "text-cyan" : "text-magenta") : "text-fg"}>
                   <Show when={m.role === "user"}>
                     {m.kind === "wake" ? "⚡ " : "» "}
                     {m.text}
                   </Show>
-                  <For each={m.role === "user" ? [] : parseBlocks(m.text ?? "")}>
+                  <For each={m.role === "user" ? [] : useSegments(() => m.text)()}>
                     {(seg) =>
                       seg.t === "md" ? (
                         <Md text={seg.text} />
@@ -486,7 +517,7 @@ export default function Chat() {
               <For each={pins()}>
                 {(p) => {
                   const Widget = WIDGETS[p.name];
-                  const u = () => ui()[p.id] ?? {};
+                  const u = createMemo(() => ui()[p.id] ?? EMPTY);
                   return (
                     <div class="border border-rule p-2 min-w-0" style={{ "grid-column": `span ${Math.min(3, p.span || 1)}` }} data-tile={p.id}>
                       <div class="flex items-baseline gap-2 text-xs mb-1">
@@ -519,7 +550,7 @@ export default function Chat() {
 
       {/* the prompt: stuck to the bottom, a chevron and a cursor, nothing else */}
       <div class="sticky bottom-0 mt-auto bg-bg border-t border-rule relative z-50" data-prompt-bar>
-        <Show when={!following() && messages().length}>
+        <Show when={!following() && messages.length}>
           <button class="absolute right-0 -top-7 text-dim hover:text-fg text-xs" onClick={() => { setFollowing(true); toBottom(); }}>
             [↓ newest]
           </button>

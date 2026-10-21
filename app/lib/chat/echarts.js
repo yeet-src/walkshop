@@ -35,6 +35,8 @@ export const fmt = (v, unit) => (v == null ? "–" : `${typeof v === "number" ? 
 
 /** A chart in `host`, resized with it, once the library is here. */
 export async function mount(host, height) {
+  /* a count the wire test reads: a chart mounted once stays mounted */
+  if (typeof window !== "undefined") window.__chartMounts = (window.__chartMounts ?? 0) + 1;
   const echarts = await loadEcharts();
   host.style.height = `${height}px`;
   const chart = echarts.init(host, "walkshop", { renderer: "canvas" });

@@ -156,6 +156,7 @@ const shot = await cdp("Page.captureScreenshot", { format: "png" });
 await writeFile(out, Buffer.from(shot.data, "base64"));
 console.log(`screenshot: ${out}`);
 console.log(`page exceptions: ${thrown.length}`);
+for (const t of thrown.slice(0, 5)) console.log(`  ! ${String(t).split("\n")[0].slice(0, 300)}`);
 for (const t of thrown.slice(0, 5)) console.log(`  ${String(t).split("\n")[0].slice(0, 200)}`);
 ws.close();
 chrome.kill("SIGTERM");
