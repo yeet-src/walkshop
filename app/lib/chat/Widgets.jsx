@@ -3,7 +3,7 @@
  * palette, no legend chrome: the series name sits at the line's end. */
 import { createEffect, For, onCleanup, onMount, Show } from "solid-js";
 
-import { fmt, mount, PALETTE } from "./echarts.js";
+import { colour, fmt, hue, mount } from "./echarts.js";
 import { Dynamic } from "solid-js/web";
 
 import { xxd } from "../hex.js";
@@ -20,7 +20,7 @@ function useChart(height, build) {
   const apply = () => {
     if (!mounted || !latest) return;
     mounted.setHeight(height());
-    mounted.chart.setOption(latest, { notMerge: false, lazyUpdate: true });
+    mounted.setOption(latest, { notMerge: false, lazyUpdate: true });
   };
   onMount(async () => {
     const m = await mount(host, height());
@@ -70,9 +70,9 @@ export function LineChart(props) {
           smooth: 0.15,
           connectNulls: false,
           emphasis: { focus: "series" },
-          lineStyle: { width: 2, color: PALETTE[i % PALETTE.length] },
-          itemStyle: { color: PALETTE[i % PALETTE.length] },
-          endLabel: { show: true, formatter: (p) => fmt(p.value?.[1], unit()), color: PALETTE[i % PALETTE.length], fontSize: 10, offset: [4, 0] },
+          lineStyle: { width: 2, color: hue(i) },
+          itemStyle: { color: hue(i) },
+          endLabel: { show: true, formatter: (p) => fmt(p.value?.[1], unit()), color: hue(i), fontSize: 10, offset: [4, 0] },
           data: (series()[n] ?? []).filter((p) => p.y != null).map((p) => [p.x, p.y]),
         })),
       };
@@ -118,7 +118,7 @@ export function SparkLine(props) {
         <span class="text-yellow text-xs">{props.attrs.title}</span>
       </Show>
       <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}>
-        <path d={d()} fill="none" stroke="#00ffff" stroke-width="1.5" />
+        <path d={d()} fill="none" stroke="var(--color-cyan)" stroke-width="1.5" />
       </svg>
       <span class="text-cyan text-xs">{fmt(vals().at(-1), props.attrs?.unit)}</span>
     </div>
@@ -157,10 +157,10 @@ export function Bars(props) {
         {
           type: "bar",
           barCategoryGap: "25%",
-          data: bars().map((b, i) => ({ value: b.value, itemStyle: { color: PALETTE[i % PALETTE.length] } })),
-          label: { show: true, position: "right", color: "#f0f0f0", formatter: (p) => fmt(p.value, unit()) },
+          data: bars().map((b, i) => ({ value: b.value, itemStyle: { color: hue(i) } })),
+          label: { show: true, position: "right", color: colour("fg"), formatter: (p) => fmt(p.value, unit()) },
           showBackground: true,
-          backgroundStyle: { color: "#141414" },
+          backgroundStyle: { color: colour("mode") },
         },
       ],
     }),
@@ -227,11 +227,11 @@ export function Canvas(props) {
       }
     }
   });
-  return <canvas ref={el} width={props.data?.width ?? 640} height={props.data?.height ?? 160} class="w-full" style={{ background: "#000", height: "auto" }} />;
+  return <canvas ref={el} width={props.data?.width ?? 640} height={props.data?.height ?? 160} class="w-full" style={{ background: "var(--color-bg)", height: "auto" }} />;
 }
 
 const TONE = { good: "text-green", warn: "text-orange", bad: "text-red", info: "text-cyan", dim: "text-dim" };
-const toneOf = (frac, warn, crit) => (crit != null && frac >= crit ? "#ff0000" : warn != null && frac >= warn ? "#ff9500" : "#00ff00");
+const toneOf = (frac, warn, crit) => `var(--color-${crit != null && frac >= crit ? "red" : warn != null && frac >= warn ? "orange" : "green"})`;
 
 /* A fraction of a ceiling, with the thresholds coloured on the arc. */
 export function Gauge(props) {
@@ -243,9 +243,9 @@ export function Gauge(props) {
       const warn = d().warn ?? null;
       const crit = d().crit ?? null;
       const stops = [];
-      if (warn != null) stops.push([warn, "#00ff00"]);
-      if (crit != null) stops.push([crit, "#ff9500"]);
-      stops.push([1, crit != null ? "#ff0000" : warn != null ? "#ff9500" : "#00ff00"]);
+      if (warn != null) stops.push([warn, colour("green")]);
+      if (crit != null) stops.push([crit, colour("orange")]);
+      stops.push([1, colour(crit != null ? "red" : warn != null ? "orange" : "green")]);
       return {
         animationDurationUpdate: 400,
         series: [
@@ -258,13 +258,13 @@ export function Gauge(props) {
             radius: "95%",
             center: ["50%", "62%"],
             axisLine: { lineStyle: { width: 12, color: stops } },
-            progress: { show: true, width: 12, itemStyle: { color: frac() >= (crit ?? 2) ? "#ff0000" : frac() >= (warn ?? 2) ? "#ff9500" : "#00ffff" } },
+            progress: { show: true, width: 12, itemStyle: { color: colour(frac() >= (crit ?? 2) ? "red" : frac() >= (warn ?? 2) ? "orange" : "cyan") } },
             pointer: { show: false },
             axisTick: { show: false },
             splitLine: { show: false },
             axisLabel: { show: false },
-            title: { show: Boolean(d().label ?? props.attrs?.title), offsetCenter: [0, "30%"], color: "#8a8a8a", fontSize: 11 },
-            detail: { valueAnimation: true, offsetCenter: [0, "-5%"], color: "#f0f0f0", fontSize: 20, formatter: () => d().text ?? `${Math.round(frac() * 100)}%` },
+            title: { show: Boolean(d().label ?? props.attrs?.title), offsetCenter: [0, "30%"], color: colour("dim"), fontSize: 11 },
+            detail: { valueAnimation: true, offsetCenter: [0, "-5%"], color: colour("fg"), fontSize: 20, formatter: () => d().text ?? `${Math.round(frac() * 100)}%` },
             data: [{ value: frac(), name: d().label ?? props.attrs?.title ?? "" }],
           },
         ],
@@ -291,8 +291,8 @@ export function Heatmap(props) {
         tooltip: { formatter: (p) => `${rl[p.value[1]]} × ${cols[p.value[0]]}: ${fmt(p.value[2], props.attrs?.unit)}` },
         xAxis: { type: "category", data: cols, axisLabel: { interval: 0, hideOverlap: true } },
         yAxis: { type: "category", data: rl, inverse: true },
-        visualMap: { min: 0, max, calculable: false, orient: "vertical", right: 0, top: "center", itemWidth: 8, itemHeight: 80, textStyle: { color: "#8a8a8a" }, inRange: { color: ["#0b1a1a", "#00ffff", "#00ff00", "#ffff00", "#ff9500", "#ff0000"] } },
-        series: [{ type: "heatmap", data, label: { show: true, color: "#000", fontSize: 10, formatter: (p) => (p.value[2] ? fmt(p.value[2]) : "") }, itemStyle: { borderColor: "#000", borderWidth: 1 }, emphasis: { itemStyle: { borderColor: "#f0f0f0" } } }],
+        visualMap: { min: 0, max, calculable: false, orient: "vertical", right: 0, top: "center", itemWidth: 8, itemHeight: 80, textStyle: { color: colour("dim") }, inRange: { color: ["mode", "cyan", "green", "yellow", "orange", "red"].map(colour) } },
+        series: [{ type: "heatmap", data, label: { show: true, color: colour("bg"), fontSize: 10, formatter: (p) => (p.value[2] ? fmt(p.value[2]) : "") }, itemStyle: { borderColor: colour("bg"), borderWidth: 1 }, emphasis: { itemStyle: { borderColor: colour("fg") } } }],
       };
     },
   );
@@ -331,7 +331,7 @@ export function Histogram(props) {
       tooltip: { trigger: "axis" },
       xAxis: { type: "category", data: bins().labels, axisLabel: { hideOverlap: true } },
       yAxis: { type: "value", minInterval: 1 },
-      series: [{ type: "bar", data: bins().counts, barCategoryGap: "10%", itemStyle: { color: "#00ffff" } }],
+      series: [{ type: "bar", data: bins().counts, barCategoryGap: "10%", itemStyle: { color: colour("cyan") } }],
     }),
   );
   return (
@@ -365,10 +365,10 @@ export function Sankey(props) {
             nodeWidth: 10,
             nodeGap: 8,
             emphasis: { focus: "adjacency" },
-            data: names.map((n, i) => ({ name: n, itemStyle: { color: PALETTE[i % PALETTE.length], borderWidth: 0 } })),
+            data: names.map((n, i) => ({ name: n, itemStyle: { color: hue(i), borderWidth: 0 } })),
             links: links().map((l) => ({ source: l.from, target: l.to, value: l.value })),
             lineStyle: { color: "gradient", opacity: 0.35, curveness: 0.5 },
-            label: { color: "#f0f0f0", fontSize: 10 },
+            label: { color: colour("fg"), fontSize: 10 },
           },
         ],
       };

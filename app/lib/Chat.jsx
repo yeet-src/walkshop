@@ -128,7 +128,7 @@ export default function Chat() {
   };
   const cornerStyle = () => {
     const at = cornerAt();
-    const base = { "max-height": "45vh", background: "rgba(0,0,0,0.55)", "backdrop-filter": "blur(6px)", "overscroll-behavior": "contain" };
+    const base = { "max-height": "45vh", background: "color-mix(in srgb, var(--color-bg) 55%, transparent)", "backdrop-filter": "blur(6px)", "overscroll-behavior": "contain" };
     return at ? { ...base, left: `${at.x}px`, top: `${at.y}px` } : { ...base, right: "1rem", bottom: "3.25rem" };
   };
 
@@ -311,7 +311,8 @@ export default function Chat() {
   const fit = () => {
     if (!root) return;
     const top = root.getBoundingClientRect().top + window.scrollY;
-    setMinH(`calc(100dvh - ${Math.round(top)}px - 8px)`);
+    const foot = document.querySelector("[data-foot]")?.offsetHeight ?? 0; /* the theme line under the page */
+    setMinH(`calc(100dvh - ${Math.round(top + foot)}px - 8px)`);
   };
   onMount(() => {
     /* The island mounts before the page around it has settled — the
@@ -501,7 +502,7 @@ export default function Chat() {
               exchanges as prose, a block as a chip, streaming as it comes */}
           <div class="fixed z-50 w-[28rem] max-w-[calc(100vw-2rem)] sm:max-w-[45vw] overflow-auto border border-rule p-2 text-xs space-y-2" style={cornerStyle()} data-dash-latest ref={(el) => setTimeout(() => (el.scrollTop = el.scrollHeight), 0)}>
             {/* the handle: drag it to move the panel; double-click sends it home */}
-            <div class="sticky -top-2 -mx-2 -mt-2 px-2 py-1 text-dim select-none flex items-baseline gap-2" style={{ cursor: "move", background: "rgba(0,0,0,0.7)" }} onMouseDown={dragCorner} onDblClick={() => { setCornerAt(null); try { localStorage.removeItem("walkshop.corner"); } catch {} }} data-corner-handle>
+            <div class="sticky -top-2 -mx-2 -mt-2 px-2 py-1 text-dim select-none flex items-baseline gap-2" style={{ cursor: "move", background: "color-mix(in srgb, var(--color-bg) 70%, transparent)" }} onMouseDown={dragCorner} onDblClick={() => { setCornerAt(null); try { localStorage.removeItem("walkshop.corner"); } catch {} }} data-corner-handle>
               <span>⋮⋮ chat</span>
               <span class="ml-auto">drag · double-click to reset</span>
             </div>

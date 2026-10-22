@@ -326,7 +326,8 @@ export default function Workbench(props) {
   const measure = () => {
     if (!frame) return;
     const top = frame.getBoundingClientRect().top;
-    const avail = window.innerHeight - top - 8;
+    const foot = document.querySelector("[data-foot]")?.offsetHeight ?? 0; /* the theme line under the page */
+    const avail = window.innerHeight - top - foot - 8;
     const n = Math.max(1, cur()?.roots?.length ?? 1);
     setView(Math.max(MIN_VIEW, Math.floor(avail / n) - HEADING));
   };

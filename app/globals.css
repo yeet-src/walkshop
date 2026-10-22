@@ -10,7 +10,11 @@
  * eyeballed — which on black is not a formality, since the most
  * saturated version of a hue is often the unreadable one.
  */
-@theme {
+@theme static {
+  /* `static`, so every variable reaches the root whether or not a class
+   * uses it: the charts read the palette off the root at runtime, and
+   * the themes below override it there. */
+
   /* True black and the sixteen-colour palette a terminal would have:
    * pure red, yellow, green, cyan and magenta, at full saturation.
    *
@@ -53,6 +57,175 @@
     Consolas, monospace;
 }
 
+
+/* ---- themes -------------------------------------------------------
+ *
+ * Every colour above is a token, so a theme is one block of overrides
+ * on `html[data-theme]`; the mode line's menu (app/lib/ThemePicker.jsx)
+ * sets the attribute and remembers it per browser, and the charts read
+ * the tokens off the root, so they follow. The palettes are the
+ * well-known open-source terminal schemes, taken as published — the
+ * same set httpscope has: each was designed for its own background,
+ * which is what keeps the coloured numbers readable on it. `paper` is
+ * the all-white one, with hues darkened to hold contrast on white.
+ * None of them names a pink, so each gets one: a tint of its magenta,
+ * checked at 5.3:1 or better on its ground. */
+html[data-theme="paper"] {
+  color-scheme: light;
+  --color-bg: #ffffff;
+  --color-mode: #f2f2f2;
+  --color-rule: #d9d9d9;
+  --color-fg: #111111;
+  --color-dim: #6b6b6b;
+  --color-red: #c40000;
+  --color-orange: #a35a00;
+  --color-yellow: #8a6d00;
+  --color-green: #0b7a2a;
+  --color-cyan: #007380;
+  --color-blue: #0b57d0;
+  --color-magenta: #9c00a6;
+  --color-pink: #b0306a;
+  --color-comment: #0b7a2a;
+}
+
+html[data-theme="solarized-dark"] {
+  --color-bg: #002b36;
+  --color-mode: #073642;
+  --color-rule: #586e75;
+  --color-fg: #eee8d5;
+  --color-dim: #93a1a1;
+  --color-red: #dc322f;
+  --color-orange: #cb4b16;
+  --color-yellow: #b58900;
+  --color-green: #859900;
+  --color-cyan: #2aa198;
+  --color-blue: #268bd2;
+  --color-magenta: #d33682;
+  --color-pink: #e58bb5;
+  --color-comment: #859900;
+}
+
+html[data-theme="solarized-light"] {
+  color-scheme: light;
+  --color-bg: #fdf6e3;
+  --color-mode: #eee8d5;
+  --color-rule: #93a1a1;
+  --color-fg: #073642;
+  --color-dim: #657b83;
+  --color-red: #dc322f;
+  --color-orange: #cb4b16;
+  --color-yellow: #b58900;
+  --color-green: #859900;
+  --color-cyan: #2aa198;
+  --color-blue: #268bd2;
+  --color-magenta: #d33682;
+  --color-pink: #b02a6d;
+  --color-comment: #859900;
+}
+
+html[data-theme="gruvbox-dark"] {
+  --color-bg: #282828;
+  --color-mode: #3c3836;
+  --color-rule: #504945;
+  --color-fg: #ebdbb2;
+  --color-dim: #a89984;
+  --color-red: #fb4934;
+  --color-orange: #fe8019;
+  --color-yellow: #fabd2f;
+  --color-green: #b8bb26;
+  --color-cyan: #8ec07c;
+  --color-blue: #83a598;
+  --color-magenta: #d3869b;
+  --color-pink: #f4a2c0;
+  --color-comment: #b8bb26;
+}
+
+html[data-theme="gruvbox-light"] {
+  color-scheme: light;
+  --color-bg: #fbf1c7;
+  --color-mode: #ebdbb2;
+  --color-rule: #bdae93;
+  --color-fg: #3c3836;
+  --color-dim: #7c6f64;
+  --color-red: #9d0006;
+  --color-orange: #af3a03;
+  --color-yellow: #b57614;
+  --color-green: #79740e;
+  --color-cyan: #427b58;
+  --color-blue: #076678;
+  --color-magenta: #8f3f71;
+  --color-pink: #9d2f6b;
+  --color-comment: #79740e;
+}
+
+html[data-theme="nord"] {
+  --color-bg: #2e3440;
+  --color-mode: #3b4252;
+  --color-rule: #4c566a;
+  --color-fg: #eceff4;
+  --color-dim: #a3b1c9;
+  --color-red: #bf616a;
+  --color-orange: #d08770;
+  --color-yellow: #ebcb8b;
+  --color-green: #a3be8c;
+  --color-cyan: #88c0d0;
+  --color-blue: #81a1c1;
+  --color-magenta: #b48ead;
+  --color-pink: #d9a7c7;
+  --color-comment: #a3be8c;
+}
+
+html[data-theme="dracula"] {
+  --color-bg: #282a36;
+  --color-mode: #343746;
+  --color-rule: #44475a;
+  --color-fg: #f8f8f2;
+  --color-dim: #a4a7bd;
+  --color-red: #ff5555;
+  --color-orange: #ffb86c;
+  --color-yellow: #f1fa8c;
+  --color-green: #50fa7b;
+  --color-cyan: #8be9fd;
+  --color-blue: #6272a4;
+  --color-magenta: #ff79c6;
+  --color-pink: #ffb3d9;
+  --color-comment: #6272a4;
+}
+
+html[data-theme="tokyo-night"] {
+  --color-bg: #1a1b26;
+  --color-mode: #24283b;
+  --color-rule: #414868;
+  --color-fg: #c0caf5;
+  --color-dim: #8a93b8;
+  --color-red: #f7768e;
+  --color-orange: #ff9e64;
+  --color-yellow: #e0af68;
+  --color-green: #9ece6a;
+  --color-cyan: #7dcfff;
+  --color-blue: #7aa2f7;
+  --color-magenta: #bb9af7;
+  --color-pink: #f0a6c8;
+  --color-comment: #9ece6a;
+}
+
+html[data-theme="one-light"] {
+  color-scheme: light;
+  --color-bg: #fafafa;
+  --color-mode: #eaeaeb;
+  --color-rule: #c9c9cc;
+  --color-fg: #383a42;
+  --color-dim: #7a7c85;
+  --color-red: #e45649;
+  --color-orange: #c18401;
+  --color-yellow: #986801;
+  --color-green: #50a14f;
+  --color-cyan: #0184bc;
+  --color-blue: #4078f2;
+  --color-magenta: #a626a4;
+  --color-pink: #b5367a;
+  --color-comment: #50a14f;
+}
 
 html {
   color-scheme: dark;
@@ -128,4 +301,49 @@ body[data-state="reconnecting"] {
   .caret {
     animation: none;
   }
+}
+
+/* ---- a NeXTSTEP menu ------------------------------------------------
+ *
+ * Grey panel, bevelled edge (light above and left, dark below and
+ * right), a black title bar in white type, black items, the pointed-at
+ * item lifted white, the chosen one checked. Deliberately outside the
+ * theme tokens: the panel was grey on every desktop it ever appeared
+ * on, and stays grey here. */
+.next-menu {
+  background: #a8a8a8;
+  color: #000;
+  border-top: 2px solid #e6e6e6;
+  border-left: 2px solid #e6e6e6;
+  border-right: 2px solid #4a4a4a;
+  border-bottom: 2px solid #4a4a4a;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55);
+  font-variant-numeric: normal;
+}
+.next-title {
+  background: #000;
+  color: #fff;
+  padding: 2px 10px;
+  letter-spacing: 0.02em;
+}
+.next-item {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 10px;
+  text-align: left;
+  color: #000;
+  background: #a8a8a8;
+  border-top: 1px solid #c8c8c8;
+  border-bottom: 1px solid #7a7a7a;
+}
+.next-item:hover,
+.next-item:focus-visible,
+.next-item[aria-checked="true"].next-item--lit {
+  background: #fff;
+  outline: none;
+}
+.next-item--lit {
+  background: #fff;
 }
